@@ -24,7 +24,7 @@ const activeProcesses = new Set();
 let spotifyToken = null;
 
 function javascriptRuntimeArgs() {
-  return [`deno:${config.DENO_PATH}`];
+  return [];
 }
 
 function parseAudioUrl(input) {
