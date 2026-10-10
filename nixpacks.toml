@@ -1,2 +1,10 @@
 [phases.setup]
-nixPkgs = ['...', 'deno', 'ffmpeg', 'yt-dlp']
+nixPkgs = ["...", "python311", "ffmpeg"]
+
+[phases.install]
+cmds = [
+  "python3 -m pip install --user --upgrade 'yt-dlp[default]'"
+]
+
+[start]
+cmd = "node src/index.js"
