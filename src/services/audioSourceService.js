@@ -130,6 +130,9 @@ function appendBounded(current, chunk, limit) {
 
 export function getAudioSourceFailureMessage(stderr, source = 'nguồn audio') {
   const normalized = String(stderr || '').toLowerCase();
+  if (/no such option:\s*--js-runtimes|unrecognized option\s*['"]?--js-runtimes/.test(normalized)) {
+    return 'Phiên bản yt-dlp quá cũ, không hỗ trợ cấu hình Deno. Hãy cập nhật yt-dlp lên phiên bản mới nhất rồi khởi động lại bot.';
+  }
   if (/no supported javascript runtime|javascript runtime.*(?:not found|missing)|deno.*(?:not found|missing)/.test(normalized)) {
     return 'Thiếu Deno trên máy chạy bot. Hãy cài Deno và bảo đảm lệnh deno có trong PATH.';
   }

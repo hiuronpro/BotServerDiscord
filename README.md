@@ -32,6 +32,8 @@ Với Railway dùng Nixpacks, `nixpacks.toml` trong repository cài FFmpeg, yt-d
 
 Nếu YouTube vẫn báo `Sign in to confirm you're not a bot` sau khi Redeploy, lỗi thường do YouTube chặn hoặc giới hạn IP outbound của máy chủ. Đổi builder sang Nixpacks, cài lại Deno hoặc khởi động lại thường không đổi IP outbound của Railway. Hãy kiểm tra log và phiên bản yt-dlp; nếu yt-dlp đã mới nhất mà lỗi vẫn còn, chờ rồi thử lại hoặc liên hệ Railway về IP outbound. Có thể cần chuyển dịch vụ sang máy chủ/mạng khác có quyền truy cập phù hợp với điều khoản dịch vụ của YouTube.
 
+Nếu log yt-dlp có `no such option: --js-runtimes`, bản yt-dlp đang chạy quá cũ để dùng cấu hình Deno của bot. Hãy cập nhật yt-dlp lên phiên bản mới nhất (trên Railway, Redeploy để cài lại dependency; trên Windows, cập nhật executable yt-dlp trong `PATH` hoặc tại `YT_DLP_PATH`), rồi khởi động lại bot.
+
 ## Cài đặt và chạy trên Windows
 
 1. Tạo Discord Application trong Developer Portal, thêm Bot và giữ `BOT_TOKEN` riêng tư. Cài bot vào server với scope `bot` và `applications.commands`; cấp quyền View Channel, Send Messages, Connect và Speak. Nếu muốn bot tự lên làm diễn giả trong Stage Channel, cấp thêm quyền server Mute Members.
