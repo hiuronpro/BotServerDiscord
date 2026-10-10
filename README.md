@@ -28,11 +28,11 @@ ffmpeg -version
 
 ### Railway
 
-Với Railway dùng Nixpacks, `nixpacks.toml` trong repository cài FFmpeg, yt-dlp và Deno khi build; bot truyền Deno cho yt-dlp để giải mã JavaScript của YouTube. `package.json` yêu cầu Node.js 22.12 trở lên. Để phát playlist Spotify, thêm `SPOTIFY_CLIENT_ID` và `SPOTIFY_CLIENT_SECRET` vào Variables của Railway; không commit hai giá trị này. Sau khi cập nhật code, chạy **Redeploy** để áp dụng runtime và dependency mới. Nếu project dùng Dockerfile hoặc builder khác, phải cài ba executable tương đương trong image và bảo đảm chúng có trong `PATH`.
+Với Railway dùng Nixpacks, `nixpacks.toml` trong repository cài FFmpeg, Python và Deno; trong bước install, pip nâng yt-dlp lên bản mới nhất để có tùy chọn `--js-runtimes`. Bot truyền Deno cho yt-dlp để giải mã JavaScript của YouTube. `package.json` yêu cầu Node.js 22.12 trở lên. Để phát playlist Spotify, thêm `SPOTIFY_CLIENT_ID` và `SPOTIFY_CLIENT_SECRET` vào Variables của Railway; không commit hai giá trị này. Sau khi cập nhật code, chạy **Redeploy** để áp dụng runtime và dependency mới. Nếu project dùng Dockerfile hoặc builder khác, phải cài ba executable tương đương trong image và bảo đảm chúng có trong `PATH`.
 
 Nếu YouTube vẫn báo `Sign in to confirm you're not a bot` sau khi Redeploy, lỗi thường do YouTube chặn hoặc giới hạn IP outbound của máy chủ. Đổi builder sang Nixpacks, cài lại Deno hoặc khởi động lại thường không đổi IP outbound của Railway. Hãy kiểm tra log và phiên bản yt-dlp; nếu yt-dlp đã mới nhất mà lỗi vẫn còn, chờ rồi thử lại hoặc liên hệ Railway về IP outbound. Có thể cần chuyển dịch vụ sang máy chủ/mạng khác có quyền truy cập phù hợp với điều khoản dịch vụ của YouTube.
 
-Nếu log yt-dlp có `no such option: --js-runtimes`, bản yt-dlp đang chạy quá cũ để dùng cấu hình Deno của bot. Hãy cập nhật yt-dlp lên phiên bản mới nhất (trên Railway, Redeploy để cài lại dependency; trên Windows, cập nhật executable yt-dlp trong `PATH` hoặc tại `YT_DLP_PATH`), rồi khởi động lại bot.
+Nếu log yt-dlp có `no such option: --js-runtimes`, bản yt-dlp đang chạy quá cũ để dùng cấu hình Deno của bot. Trên Railway dùng Nixpacks, redeploy commit có cấu hình cài yt-dlp qua pip; kiểm tra build log để xác nhận bước cài chạy thành công và bot dùng đúng builder. Trên Windows, cập nhật executable yt-dlp trong `PATH` hoặc tại `YT_DLP_PATH`, rồi khởi động lại bot.
 
 ## Cài đặt và chạy trên Windows
 
