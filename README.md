@@ -15,7 +15,7 @@ Bot Discord dùng `discord.js` v14, Node.js và ES Modules để quản lý thô
 - FFmpeg cài riêng và có `ffmpeg.exe` trong `PATH`.
 - yt-dlp cài riêng và có `yt-dlp.exe` trong `PATH`, hoặc cấu hình đường dẫn đầy đủ trong `YT_DLP_PATH`.
 - Deno trong `PATH` để yt-dlp giải mã JavaScript của YouTube.
-- Bot cần quyền trong server: **View Channel**, **Send Messages**, **Connect**, **Speak**; thêm **Embed Links** nếu gửi log dạng embed. Để bot tự lên làm diễn giả trong Stage Channel, cấp thêm quyền server **Mute Members**; đây là quyền Discord yêu cầu để bot tự bỏ trạng thái khán giả.
+- Bot không cần quyền **Administrator**, **Manage Server** hoặc **Manage Roles** để được mời vào server. Bộ quyền hoạt động tiêu chuẩn gồm **View Channels**, **Send Messages**, **Embed Links**, **Connect** và **Speak**. Chỉ cấp thêm **Mute Members** nếu muốn bot tự lên làm diễn giả trong Stage Channel; không dùng Stage thì không cần quyền này. Có thể giới hạn các quyền theo từng channel thay vì cấp toàn server.
 
 Lấy yt-dlp từ trang cài đặt/phát hành chính thức của dự án yt-dlp và FFmpeg từ trang tải chính thức hoặc bản build Windows được FFmpeg giới thiệu. Không tải executable từ nguồn không tin cậy. Trên Windows, kiểm tra cài đặt bằng:
 
@@ -38,7 +38,11 @@ Lỗi `no such option: --js-runtimes` là dấu hiệu bot đang gọi nhầm ho
 
 ## Cài đặt và chạy trên Windows
 
-1. Tạo Discord Application trong Developer Portal, thêm Bot và giữ `BOT_TOKEN` riêng tư. Cài bot vào server với scope `bot` và `applications.commands`; cấp quyền View Channel, Send Messages, Connect và Speak. Nếu muốn bot tự lên làm diễn giả trong Stage Channel, cấp thêm quyền server Mute Members.
+1. Tạo Discord Application trong Developer Portal, thêm Bot và giữ `BOT_TOKEN` riêng tư. Mời bot bằng scope `bot` và `applications.commands`, không chọn Administrator. Để bot nhìn thấy kênh theo quyền mặc định của server, cấp View Channels ở cấp server; channel nào có permission override riêng vẫn có thể chặn bot. Có thể dùng link dưới đây sau khi thay `YOUR_CLIENT_ID` bằng Application ID:
+   ```text
+   https://discord.com/oauth2/authorize?client_id=YOUR_CLIENT_ID&permissions=3165184&scope=bot%20applications.commands
+   ```
+   Bộ quyền trong link gồm View Channels, Send Messages, Embed Links, Connect và Speak; không gồm quyền quản lý server/role. Nếu dùng Stage Channel và muốn bot tự lên làm diễn giả, cấp thêm Mute Members riêng. Nếu không, bot vẫn dùng được ở voice channel thường.
 2. Cài Node.js 22.12+, FFmpeg, yt-dlp và Deno; mở PowerShell mới để nạp `PATH`.
 3. Trong thư mục dự án, cài dependency:
    ```powershell
@@ -71,7 +75,7 @@ Lỗi `no such option: --js-runtimes` là dấu hiệu bot đang gọi nhầm ho
 
 ## Player
 
-- `/join`: bot vào voice channel hoặc Stage Channel của người gọi. Trên Stage, bot tự bỏ trạng thái khán giả để lên làm diễn giả; cần View Channel, Connect, Speak và quyền server Mute Members. Gọi lại ở channel khác sẽ chuyển bot có kiểm soát và dọn phiên/queue cũ.
+- `/join`: bot vào voice channel hoặc Stage Channel của người gọi. Trên Stage, bot tự bỏ trạng thái khán giả để lên làm diễn giả; cần View Channel, Connect, Speak và Mute Members. Gọi lại ở channel khác sẽ chuyển bot có kiểm soát và dọn phiên/queue cũ.
 - `/play link:<URL>`: tự đưa bot vào voice channel/Stage của người gọi rồi phát **nhạc/audio** từ track hoặc playlist YouTube/SoundCloud; playlist chỉ thêm các bài vừa với số chỗ còn trống trong queue. Trong lúc resolve link, lệnh báo bot đã vào voice và đang xử lý. Link Mix/Radio YouTube có kèm video sẽ phát video đó; YouTube không cho bot tải nguyên danh sách Mix/Radio nên link Mix không kèm video không hỗ trợ. Link track Spotify được đọc metadata công khai rồi tìm bản tương ứng trên YouTube. Playlist Spotify công khai cần Spotify Client ID/Secret và cũng được tìm từng track trên YouTube; kết quả có thể khác bản gốc. Playlist riêng tư, livestream, URL không hợp lệ và track vượt giới hạn không được phát; bài không lấy được metadata sẽ được bỏ qua và báo số lượng. yt-dlp đọc metadata trước, sau đó truyền audio stream theo luồng, không tải toàn bộ track vào RAM.
 - `/pause` và `/resume`: tạm dừng/tiếp tục bài hiện tại.
 - `/nowplaying`: hiển thị tiêu đề, nguồn, link, thời lượng và tiến độ.
