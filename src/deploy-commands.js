@@ -9,6 +9,50 @@ import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { config } from './config/env.js';
 
+function playerCommand(name, description) {
+  return new SlashCommandBuilder()
+    .setName(name)
+    .setDescription(description)
+    .setIntegrationTypes(ApplicationIntegrationType.GuildInstall)
+    .setContexts(InteractionContextType.Guild);
+}
+
+const playerCommands = [
+  playerCommand('join', 'Cho bot vào kênh thoại của bạn'),
+  playerCommand('play', 'Phát track/playlist YouTube/SoundCloud; Spotify tìm trên YouTube')
+    .addStringOption((option) => option
+      .setName('link')
+      .setDescription('Link track/playlist YouTube, SoundCloud hoặc Spotify')
+      .setRequired(true)),
+  playerCommand('pause', 'Tạm dừng bài đang phát'),
+  playerCommand('resume', 'Tiếp tục bài đang tạm dừng'),
+  playerCommand('nowplaying', 'Xem bài nhạc hiện đang phát'),
+  playerCommand('queue', 'Xem queue phát của server')
+    .addIntegerOption((option) => option
+      .setName('page')
+      .setDescription('Trang queue, mỗi trang tối đa 10 bài nhạc')
+      .setMinValue(1)
+      .setRequired(false)),
+  playerCommand('skip', 'Bỏ qua bài đang phát'),
+  playerCommand('remove', 'Xóa một bài nhạc khỏi queue')
+    .addIntegerOption((option) => option
+      .setName('position')
+      .setDescription('Vị trí trong danh sách đang chờ, bắt đầu từ 1')
+      .setMinValue(1)
+      .setRequired(true)),
+  playerCommand('clear', 'Xóa queue đang chờ, giữ bài hiện tại'),
+  playerCommand('volume', 'Đặt âm lượng từ 0 đến 100')
+    .addIntegerOption((option) => option
+      .setName('volume')
+      .setDescription('Mức âm lượng phần trăm')
+      .setMinValue(0)
+      .setMaxValue(100)
+      .setRequired(true)),
+  playerCommand('stop', 'Dừng bài hiện tại và giữ bot trong voice'),
+  playerCommand('leave', 'Dừng phát và rời kênh thoại'),
+  playerCommand('help', 'Xem trợ giúp bot phát nhạc'),
+];
+
 export const commands = [
   new SlashCommandBuilder()
     .setName('thongbao')
@@ -80,6 +124,7 @@ export const commands = [
     .addSubcommand((subcommand) => subcommand
       .setName('xem')
       .setDescription('Xem cấu hình hiện tại')),
+  ...playerCommands,
 ].map((command) => command.toJSON());
 
 export async function deployCommands() {
@@ -92,10 +137,12 @@ export async function deployCommands() {
   await rest.put(globalRoute, { body: commands });
 
   if (config.GUILD_ID) {
-    await rest.put(
-      Routes.applicationGuildCommands(config.CLIENT_ID, config.GUILD_ID),
-      { body: [] },
-    );
+    const guildRoute = Routes.applicationGuildCommands(config.CLIENT_ID, config.GUILD_ID);
+    await rest.put(guildRoute, { body: [] });
+    const guildCommands = await rest.get(guildRoute);
+    if (guildCommands.length) {
+      throw new Error('Không thể xóa slash command riêng của server; các lệnh này có thể bị trùng với lệnh toàn cục.');
+    }
   }
 
   const deployedCommands = await rest.get(globalRoute);

@@ -1,0 +1,2 @@
+[phases.setup]
+nixPkgs = ['...', 'deno', 'ffmpeg', 'yt-dlp']

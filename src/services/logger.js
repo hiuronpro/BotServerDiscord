@@ -60,9 +60,8 @@ export async function sendAnnouncementLog({
   if (
     !permissions?.has(PermissionFlagsBits.ViewChannel)
     || !permissions.has(PermissionFlagsBits.SendMessages)
-    || !permissions.has(PermissionFlagsBits.EmbedLinks)
   ) {
-    throw new Error('Bot cần quyền View Channel, Send Messages và Embed Links tại kênh log.');
+    throw new Error('Bot cần quyền View Channel và Send Messages tại kênh log.');
   }
 
   const embed = new EmbedBuilder()
@@ -71,7 +70,7 @@ export async function sendAnnouncementLog({
     .addFields(
       {
         name: 'Người gửi',
-        value: `<@${actor.id}> (\`${actor.tag || actor.username}\` · \`${actor.id}\`)`,
+        value: `${actor.globalName || actor.username} (\`@${actor.username} · ${actor.id}\`)`,
         inline: false,
       },
       {
@@ -90,9 +89,22 @@ export async function sendAnnouncementLog({
     )
     .setTimestamp(new Date());
 
-  await logChannel.send({
-    embeds: [embed],
-    allowedMentions: { parse: [] },
-  });
+  if (permissions.has(PermissionFlagsBits.EmbedLinks)) {
+    await logChannel.send({
+      embeds: [embed],
+      allowedMentions: { parse: [] },
+    });
+  } else {
+    await logChannel.send({
+      content: [
+        '📢 Đã gửi thông báo',
+        `Người gửi: ${actor.globalName || actor.username} (@${actor.username} · ${actor.id})`,
+        `Kênh nhận thông báo: #${announcementChannel.name} (${announcementChannel.id})`,
+        `Tin nhắn: ${messageUrl || messageId}`,
+        roleNames.length ? `Role được nhắc: ${roleNames.join(', ')}` : null,
+      ].filter(Boolean).join('\n'),
+      allowedMentions: { parse: [] },
+    });
+  }
   return true;
 }

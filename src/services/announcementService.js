@@ -68,7 +68,6 @@ export function deleteAnnouncementSession(id) {
 }
 
 export async function getAvailableAnnouncementChannels(guild, botMember) {
-  await guild.channels.fetch();
   const available = [];
 
   for (const channel of guild.channels.cache.values()) {

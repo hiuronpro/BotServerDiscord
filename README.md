@@ -1,89 +1,105 @@
 # Overnight Group
 
-Discord bot for server announcements built with Discord.js v14 and Node.js LTS.
+Bot Discord dùng `discord.js` v14, Node.js và ES Modules để quản lý thông báo và phát âm thanh theo phiên riêng của từng server.
 
-## Features
+## Tính năng
 
-- `/thongbao` for authorized users to send announcements
-- `/setting` for server administrators to define which roles may use the bot
-- `/setting` also configures a per-server Discord log channel for announcement sender and destination records
-- Discord lists registered global slash commands in the bot profile's **Lệnh** section
-- Bot activity also shows `/thongbao` and `/setting`
-- Safe JSON config stored in `data/guild-settings.json`
-- Per-guild configuration, atomic file writes, and logging for announcement activity
+- `/thongbao`: soạn, xem trước và gửi thông báo; `/setting`: phân quyền role và cấu hình kênh log.
+- `/join`, `/play`, `/pause`, `/resume`, `/nowplaying`, `/queue`, `/skip`, `/remove`, `/clear`, `/volume`, `/stop`, `/leave`, `/help`: bot phát nhạc từ YouTube/SoundCloud và hỗ trợ link track Spotify bằng cách tìm bản tương ứng trên YouTube.
+- Mỗi guild có voice connection, audio player và queue riêng. `/play` tự phát khi player đang rảnh, hoặc thêm bài nhạc vào queue khi đang phát.
+- Log hoạt động thông báo được ghi ở `logs/announcement.log`; cấu hình server ở `data/guild-settings.json`.
 
-## Prerequisites
+## Yêu cầu
 
-- Node.js 20+
-- A Discord application with a bot token
-- Permission to add slash commands to your server
+- Node.js 22.12 trở lên và npm (`@discordjs/voice` cần DAVE để kết nối voice Discord).
+- FFmpeg cài riêng và có `ffmpeg.exe` trong `PATH`.
+- yt-dlp cài riêng và có `yt-dlp.exe` trong `PATH`, hoặc cấu hình đường dẫn đầy đủ trong `YT_DLP_PATH`.
+- Deno trong `PATH` để yt-dlp giải mã JavaScript của YouTube.
+- Bot cần quyền trong server: **View Channel**, **Send Messages**, **Connect**, **Speak**; thêm **Embed Links** nếu gửi log dạng embed. Để bot tự lên làm diễn giả trong Stage Channel, cấp thêm quyền server **Mute Members**; đây là quyền Discord yêu cầu để bot tự bỏ trạng thái khán giả.
 
-## Installation
+Lấy yt-dlp từ trang cài đặt/phát hành chính thức của dự án yt-dlp và FFmpeg từ trang tải chính thức hoặc bản build Windows được FFmpeg giới thiệu. Không tải executable từ nguồn không tin cậy. Trên Windows, kiểm tra cài đặt bằng:
 
-1. Clone the project and open the folder.
-2. Install dependencies:
-   ```bash
+```powershell
+yt-dlp --version
+ffmpeg -version
+```
+
+`@discordjs/voice` được ghim ở phiên bản hỗ trợ DAVE. Opus dùng fallback JavaScript `opusscript`; máy ít tài nguyên có thể cân nhắc cài codec native tương thích sau này.
+
+### Railway
+
+Với Railway dùng Nixpacks, `nixpacks.toml` trong repository cài FFmpeg, yt-dlp và Deno khi build. `package.json` yêu cầu Node.js 22.12 trở lên. Để phát playlist Spotify, thêm `SPOTIFY_CLIENT_ID` và `SPOTIFY_CLIENT_SECRET` vào Variables của Railway; không commit hai giá trị này. Sau khi cập nhật code, chạy **Redeploy** để áp dụng runtime và dependency mới. Nếu project dùng Dockerfile hoặc builder khác, phải cài ba executable tương đương trong image và bảo đảm chúng có trong `PATH`.
+
+## Cài đặt và chạy trên Windows
+
+1. Tạo Discord Application trong Developer Portal, thêm Bot và giữ `BOT_TOKEN` riêng tư. Cài bot vào server với scope `bot` và `applications.commands`; cấp quyền View Channel, Send Messages, Connect và Speak. Nếu muốn bot tự lên làm diễn giả trong Stage Channel, cấp thêm quyền server Mute Members.
+2. Cài Node.js 22.12+, FFmpeg, yt-dlp và Deno; mở PowerShell mới để nạp `PATH`.
+3. Trong thư mục dự án, cài dependency:
+   ```powershell
    npm install
    ```
-3. Copy `.env.example` to `.env` and fill in the values:
-   ```bash
-   copy .env.example .env
+4. Tạo `.env`:
+   ```powershell
+   Copy-Item .env.example .env
    ```
-4. Update `.env` with:
-   - `BOT_TOKEN`: bot token from the Discord Developer Portal
-   - `CLIENT_ID`: application ID for the bot
-   - `GUILD_ID`: optional; if set, removes old server-only slash commands during deployment
-
-## Commands
-
-1. Deploy slash commands:
-   ```bash
+5. Điền các biến:
+   - `BOT_TOKEN`: token bot từ Discord Developer Portal.
+   - `CLIENT_ID`: Application ID.
+   - `GUILD_ID`: tùy chọn; khi deploy, xóa các lệnh riêng cũ của server này để tránh trùng với bộ lệnh toàn cục.
+   - `YT_DLP_PATH`: mặc định `yt-dlp`; có thể đặt đường dẫn đầy đủ tới `yt-dlp.exe`.
+   - `DENO_PATH`: mặc định `deno`; có thể đặt đường dẫn đầy đủ tới `deno.exe` nếu không có trong `PATH`.
+   - `FFMPEG_PATH`: tùy chọn, đường dẫn đầy đủ tới `ffmpeg.exe`; thư mục chứa file sẽ được thêm vào `PATH`.
+   - `SPOTIFY_CLIENT_ID` và `SPOTIFY_CLIENT_SECRET`: tùy chọn, lấy trong Spotify Developer Dashboard; cần cho playlist Spotify công khai. Spotify yêu cầu tài khoản sở hữu ứng dụng có gói Premium đang hoạt động để gọi API playlist; sau khi đổi gói, quyền API có thể mất vài giờ mới cập nhật. Không cần hai biến này cho link track Spotify đơn.
+   - `MAX_QUEUE_SIZE`: số bài nhạc tối đa trong một phiên, mặc định `20` (tính cả bài đang phát).
+   - `MAX_VIDEO_MINUTES`: thời lượng tối đa mỗi bài nhạc, mặc định `120` phút. Tên biến cũ được giữ để tương thích cấu hình hiện tại.
+6. Đăng ký slash commands:
+   ```powershell
    npm run deploy
    ```
-   or:
-   ```bash
-   npm run deploy:commands
-   ```
-   Commands are registered globally for use in servers, and deployment verifies Discord returns both command names. If `.env` contains an old `GUILD_ID`, deployment removes the guild-only copies to prevent them shadowing the global commands. Global command changes may take time to appear across Discord.
-2. Start the bot:
-   ```bash
+7. Chạy bot:
+   ```powershell
    npm start
    ```
 
-## Using `/thongbao`
+`npm start` đăng ký/kiểm tra slash commands trước khi đăng nhập bot như hành vi hiện tại của dự án. Các lệnh chỉ được đăng ký toàn cục; Discord có thể cần thời gian cập nhật. Chỉ chạy **một instance** cho mỗi bot token.
 
-1. Run `/thongbao` in a server where you are an administrator or have been allowed in `/setting`.
-2. Start `/thongbao` by searching for the required `kenh` option, then optionally search `role1` through `role5` to add up to five mentions. Each role field uses Autocomplete independently and also suggests `@everyone` and `@here`; select at most one of these server-wide mentions. Those pings are sent only when the bot has **Mention Everyone** permission in the destination channel.
-3. The compact modal contains the message editor and optional upload of up to four images. Insert emojis directly in the message using Discord's emoji picker; they stay inline with the text and are preserved when reopening the draft to edit. Discord Markdown is also preserved. All selected roles are mentioned at the end of the announcement. Manually entered `<@&ROLE_ID>` mentions are validated and moved to the end.
-4. After submitting the modal, review the preview and choose **Gửi thông báo**, **Chỉnh sửa**, or **Hủy**. No public message is sent before choosing **Gửi thông báo**.
+## Player
 
-The message body is sent as normal Discord text when it fits Discord's 2000-character message limit. Longer bodies are sent in an embed description, with authorized role mentions posted separately after the announcement so they still appear at the bottom. Uploaded images are attached to the announcement. A user with `/thongbao` permission can target a private text channel even without access to view it; the bot must have **Send Messages** there, and also **Embed Links** for embed announcements. The user's channel visibility does not restrict the bot's destination. Role mentions work when the role is mentionable or the bot has the relevant permission in the destination channel. `@everyone` and `@here` are parsed only when the bot has the **Mention Everyone** permission there. `/thongbao` offers five independent role Autocomplete fields; `/setting` Autocomplete searches matching server roles and channels as you type. Any member with one allowed role is authorized. Administrators always retain access. Sessions are private, tied to the initiating user and server, and expire after 15 minutes.
+- `/join`: bot vào voice channel hoặc Stage Channel của người gọi. Trên Stage, bot tự bỏ trạng thái khán giả để lên làm diễn giả; cần View Channel, Connect, Speak và quyền server Mute Members. Gọi lại ở channel khác sẽ chuyển bot có kiểm soát và dọn phiên/queue cũ.
+- `/play link:<URL>`: tự đưa bot vào voice channel/Stage của người gọi rồi phát **nhạc/audio** từ track hoặc playlist YouTube/SoundCloud; playlist chỉ thêm các bài vừa với số chỗ còn trống trong queue. Trong lúc resolve link, lệnh báo bot đã vào voice và đang xử lý. Link Mix/Radio YouTube có kèm video sẽ phát video đó; YouTube không cho bot tải nguyên danh sách Mix/Radio nên link Mix không kèm video không hỗ trợ. Link track Spotify được đọc metadata công khai rồi tìm bản tương ứng trên YouTube. Playlist Spotify công khai cần Spotify Client ID/Secret và cũng được tìm từng track trên YouTube; kết quả có thể khác bản gốc. Playlist riêng tư, livestream, URL không hợp lệ và track vượt giới hạn không được phát; bài không lấy được metadata sẽ được bỏ qua và báo số lượng. yt-dlp đọc metadata trước, sau đó truyền audio stream theo luồng, không tải toàn bộ track vào RAM.
+- `/pause` và `/resume`: tạm dừng/tiếp tục bài hiện tại.
+- `/nowplaying`: hiển thị tiêu đề, nguồn, link, thời lượng và tiến độ.
+- `/queue page:<số>`: xem bài đang phát và queue; mỗi trang tối đa 10 bài nhạc đang chờ.
+- `/skip`: bỏ bài hiện tại và thử phát bài tiếp theo.
+- `/remove position:<số>`: xóa bài đang chờ theo vị trí trong queue, tính từ 1.
+- `/clear`: xóa bài chờ nhưng không ngắt bài đang phát.
+- `/volume volume:<0-100>`: đặt mức âm lượng cho phiên voice.
+- `/stop`: dừng bài đang phát nhưng giữ bot và queue trong voice channel.
+- `/leave`: dừng audio, xóa queue, đóng voice connection và dọn tiến trình.
+- `/help`: xem hướng dẫn nhanh.
 
-Administrators manage settings with `/setting` Autocomplete subcommands:
+Player hỗ trợ **âm thanh** từ YouTube và SoundCloud. Spotify không cung cấp luồng audio trực tiếp cho bot này; track/playlist Spotify chỉ dùng để lấy metadata và tìm bản tương ứng trên YouTube. Âm thanh thực tế do YouTube cung cấp, có thể không khớp hoàn toàn track gốc. Bot không truyền hình ảnh video. Chỉ phát nội dung bạn có quyền sử dụng và tuân thủ điều khoản của dịch vụ nguồn cùng luật áp dụng.
 
-- `/setting them-role role:<search>` grants a role permission to use `/thongbao`.
-- `/setting go-role role:<search>` removes a role's permission.
-- `/setting kenh-log kenh:<search>` chooses the announcement audit-log channel.
-- `/setting xoa-log` disables Discord audit logging.
-- `/setting xem` displays the current configuration.
+## Thông báo và cài đặt
 
-After a successful announcement, the bot logs who sent it, the destination channel, and a link to the message. The bot needs **View Channel**, **Send Messages**, and **Embed Links** in the configured log channel. Autocomplete searches the server's roles and text channels and returns matching suggestions as you type.
+- `/thongbao`: chọn kênh và tối đa năm role mention, nhập nội dung trong modal, xem trước rồi xác nhận gửi.
+- `/setting them-role role:<search>` / `/setting go-role role:<search>`: cấp/gỡ quyền dùng bot cho role.
+- `/setting kenh-log kenh:<search>`: chọn kênh log; `/setting xoa-log`: tắt log; `/setting xem`: xem cấu hình.
+- Thành viên có role được cấp quyền hoặc là Administrator có thể dùng `/thongbao`.
+- Kênh log cần View Channel và Send Messages. Nếu có Embed Links, log được gửi dạng embed; nếu không, bot dùng văn bản thường.
 
-## Directory structure
+## Bảo mật và giới hạn
 
-- `src/`: bot source code
-- `data/`: per-server settings file
-- `logs/`: announcement logs
+- Không commit `.env` hoặc token.
+- Đường dẫn `/play` được giới hạn ở hostname và dạng link YouTube, SoundCloud, Spotify được hỗ trợ. Spotify playlist cần client credentials; không dùng cookies trình duyệt hay cơ chế vượt hạn chế tuổi/khu vực.
+- yt-dlp/FFmpeg là executable bên ngoài, không được bot tự tải/cài; cần cập nhật chúng riêng khi YouTube thay đổi.
+- Queue và voice session lưu trong bộ nhớ, không được chia sẻ giữa nhiều tiến trình. Chỉ chạy một instance bot; restart sẽ xóa queue.
+- Cần thử kết nối voice trong server Discord sau khi cấu hình quyền và executable; bot phát âm thanh, không phát hình ảnh video.
 
-## Security notes
+## Kiểm thử
 
-- Do not commit `.env` or any tokens.
-- Use the Discord Developer Portal to set an avatar and bot username.
-- The bot only parses mentions explicitly present in an announcement and checks mention permissions in the destination channel.
-- Grant announcement access with `/setting`; server administrators always retain access.
+```powershell
+npm test
+```
 
-## Common issues
-
-- If slash commands are not showing in the bot profile, run `npm run deploy:commands` and allow time for Discord's global command propagation.
-- If the bot cannot send a message to a channel, check the bot permissions in that channel.
-- If the config file is corrupted, fix it or delete it so the bot can recreate a valid default structure.
+Các bài test hiện có kiểm tra URL track/playlist YouTube/SoundCloud/Spotify được phép/từ chối, phân loại lỗi extractor, thao tác queue và cấu hình slash commands.

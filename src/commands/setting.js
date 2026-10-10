@@ -182,12 +182,11 @@ function buildLogChannelRows(guild, settings, botMember, page = 0) {
       .addOptions(channelChunk.map((channel) => {
         const permissions = channel.permissionsFor(botMember);
         const canLog = permissions?.has(PermissionFlagsBits.ViewChannel)
-          && permissions.has(PermissionFlagsBits.SendMessages)
-          && permissions.has(PermissionFlagsBits.EmbedLinks);
+          && permissions.has(PermissionFlagsBits.SendMessages);
         return new StringSelectMenuOptionBuilder()
           .setLabel(`#${channel.name}`.slice(0, 100))
           .setValue(channel.id)
-          .setDescription(canLog ? 'Có thể gửi log' : 'Bot thiếu quyền gửi log')
+          .setDescription(canLog ? 'Có thể gửi log' : 'Bot thiếu quyền xem hoặc gửi tin')
           .setDefault(settings.logChannelId === channel.id);
       }));
     rows.push(new ActionRowBuilder().addComponents(menu));
@@ -220,7 +219,6 @@ export async function handleSettingAutocomplete(interaction) {
   const settings = loadGuildSettings(interaction.guild.id);
 
   if (focused.name === 'role' && ['them-role', 'go-role'].includes(subcommand)) {
-    await interaction.guild.roles.fetch();
     const isRemoving = subcommand === 'go-role';
     const allowedRoles = new Set(settings.allowedRoles);
     const results = getSettingsGuildRoles(interaction.guild)
@@ -238,7 +236,6 @@ export async function handleSettingAutocomplete(interaction) {
   }
 
   if (focused.name === 'kenh' && subcommand === 'kenh-log') {
-    await interaction.guild.channels.fetch();
     const botMember = interaction.guild.members.me ?? await interaction.guild.members.fetchMe();
     const results = getSettingsGuildTextChannels(interaction.guild)
       .filter((channel) => `${channel.name} ${channel.id}`.toLocaleLowerCase().includes(query))
@@ -246,8 +243,7 @@ export async function handleSettingAutocomplete(interaction) {
       .map((channel) => {
         const permissions = channel.permissionsFor(botMember);
         const canLog = permissions?.has(PermissionFlagsBits.ViewChannel)
-          && permissions.has(PermissionFlagsBits.SendMessages)
-          && permissions.has(PermissionFlagsBits.EmbedLinks);
+          && permissions.has(PermissionFlagsBits.SendMessages);
         return {
           name: `${canLog ? '' : '⚠ '}#${channel.name}`.slice(0, 100),
           value: channel.id,
@@ -271,7 +267,6 @@ export async function handleSettingCommand(interaction) {
 
   const subcommand = interaction.options.getSubcommand();
   if (subcommand === 'them-role' || subcommand === 'go-role') {
-    await interaction.guild.roles.fetch();
     const roleId = interaction.options.getString('role', true);
     const role = interaction.guild.roles.cache.get(roleId);
     if (!role || role.id === interaction.guild.id) {
@@ -305,7 +300,6 @@ export async function handleSettingCommand(interaction) {
   }
 
   if (subcommand === 'kenh-log') {
-    await interaction.guild.channels.fetch();
     const channelId = interaction.options.getString('kenh', true);
     const channel = interaction.guild.channels.cache.get(channelId);
     if (!channel || !LOG_CHANNEL_TYPES.has(channel.type) || channel.guildId !== interaction.guild.id) {
@@ -321,10 +315,9 @@ export async function handleSettingCommand(interaction) {
     if (
       !permissions?.has(PermissionFlagsBits.ViewChannel)
       || !permissions.has(PermissionFlagsBits.SendMessages)
-      || !permissions.has(PermissionFlagsBits.EmbedLinks)
     ) {
       await interaction.reply({
-        content: 'Bot cần quyền View Channel, Send Messages và Embed Links tại kênh log.',
+        content: 'Bot cần quyền View Channel và Send Messages tại kênh log.',
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -349,10 +342,6 @@ export async function handleSettingCommand(interaction) {
     return;
   }
 
-  await Promise.all([
-    interaction.guild.roles.fetch(),
-    interaction.guild.channels.fetch(),
-  ]);
   const settings = loadGuildSettings(interaction.guild.id);
   const botMember = interaction.guild.members.me ?? await interaction.guild.members.fetchMe();
   await interaction.reply({

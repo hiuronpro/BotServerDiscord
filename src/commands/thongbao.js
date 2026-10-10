@@ -19,8 +19,6 @@ export async function handleThongbaoCommand(interaction) {
   }
 
   const channelId = interaction.options.getString("kenh", true);
-  await interaction.guild.channels.fetch();
-  await interaction.guild.roles.fetch();
   const roleValues = Array.from({ length: 5 }, (_, index) =>
     interaction.options.getString(`role${index + 1}`),
   ).filter(Boolean);
@@ -83,7 +81,6 @@ export async function handleThongbaoAutocomplete(interaction) {
 
   const focused = interaction.options.getFocused(true);
   if (/^role[1-5]$/.test(focused.name)) {
-    await interaction.guild.roles.fetch();
     const focusedIndex = Number(focused.name.slice(4)) - 1;
     const selectedValues = Array.from({ length: 5 }, (_, index) =>
       index === focusedIndex
@@ -129,9 +126,6 @@ export async function handleThongbaoAutocomplete(interaction) {
   }
 
   const query = focused.value.trim().replace(/^[#@]/, "").toLocaleLowerCase();
-  if (focused.name === "kenh") {
-    await interaction.guild.channels.fetch();
-  }
   const matches =
     focused.name === "kenh"
       ? [...interaction.guild.channels.cache.values()]

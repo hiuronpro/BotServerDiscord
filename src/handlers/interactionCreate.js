@@ -4,6 +4,7 @@ import {
   handleThongbaoCommand,
   buildAnnouncementModal,
 } from '../commands/thongbao.js';
+import { handleMusicCommand } from '../commands/music.js';
 import {
   buildSettingsComponents,
   buildSettingsEmbed,
@@ -38,6 +39,21 @@ import { validateAnnouncementInput } from '../utils/validators.js';
 
 const SESSION_CUSTOM_ID = /^tb:([0-9a-f]{16}):([a-z0-9-]+)$/;
 const MODAL_CUSTOM_ID = /^tb:([0-9a-f]{16}):modal$/;
+export const MUSIC_COMMANDS = new Set([
+  'join',
+  'play',
+  'pause',
+  'resume',
+  'nowplaying',
+  'queue',
+  'skip',
+  'remove',
+  'clear',
+  'volume',
+  'stop',
+  'leave',
+  'help',
+]);
 
 function getSessionFromCustomId(interaction, pattern = SESSION_CUSTOM_ID) {
   const match = interaction.customId.match(pattern);
@@ -107,21 +123,11 @@ async function respondToModalError(interaction, session, message) {
     warning: true,
   });
   const content = `${message}\n\nBản nháp đã được giữ lại. Chọn **Sửa bản nháp** để thử lại.`;
-  if (session.hasComposerMessage) {
-    await interaction.update({ content, embeds: [], components });
-    return;
-  }
-
-  await interaction.reply({
-    content,
-    components,
-    flags: MessageFlags.Ephemeral,
-  });
+  await interaction.editReply({ content, embeds: [], components });
   session.hasComposerMessage = true;
 }
 
 async function refreshComposer(interaction, session, warning = '') {
-  await interaction.guild.roles.fetch();
   session.roleIds = session.roleIds.filter((roleId) => interaction.guild.roles.cache.has(roleId));
   const botMember = interaction.guild.members.me ?? await interaction.guild.members.fetchMe();
   const channelOptions = await getAvailableAnnouncementChannels(interaction.guild, botMember);
@@ -130,30 +136,33 @@ async function refreshComposer(interaction, session, warning = '') {
     session.channelId = null;
   }
 
-  await interaction.update({
+  const payload = {
     content: '',
     embeds: [buildComposerEmbed(session, interaction.guild, channelOptions, warning)],
     components: buildAnnouncementComposerRows(session.id, {
       hasContent: Boolean(session.content.trim()),
       warning: Boolean(warning),
     }),
-  });
+  };
+  if (interaction.isModalSubmit() || interaction.deferred) {
+    await interaction.editReply(payload);
+  } else {
+    await interaction.update(payload);
+  }
 }
 
 async function showPreview(interaction, session) {
+  if (!interaction.deferred && !interaction.replied) {
+    await interaction.deferUpdate();
+  }
+
   if (!session.content.trim()) {
-    await interaction.reply({
-      content: 'Nhập nội dung thông báo trước khi xem trước hoặc gửi.',
-      flags: MessageFlags.Ephemeral,
-    });
+    await interaction.editReply({ content: 'Nhập nội dung thông báo trước khi xem trước hoặc gửi.' });
     return;
   }
 
   if (!session.channelId) {
-    await interaction.reply({
-      content: 'Hãy chọn kênh gửi trước khi xem trước hoặc gửi.',
-      flags: MessageFlags.Ephemeral,
-    });
+    await interaction.editReply({ content: 'Hãy chọn kênh gửi trước khi xem trước hoặc gửi.' });
     return;
   }
 
@@ -242,12 +251,8 @@ async function showPreview(interaction, session) {
     components: buildAnnouncementPreviewRows(session.id),
     allowedMentions: { parse: [] },
   };
-  if (session.hasComposerMessage) {
-    await interaction.update(preview);
-  } else {
-    await interaction.reply({ ...preview, flags: MessageFlags.Ephemeral });
-    session.hasComposerMessage = true;
-  }
+  await interaction.editReply(preview);
+  session.hasComposerMessage = true;
 }
 
 async function confirmAnnouncement(interaction, session) {
@@ -279,6 +284,7 @@ async function confirmAnnouncement(interaction, session) {
 
   session.sending = true;
   try {
+    await interaction.deferUpdate();
     await confirmAnnouncementLocked(interaction, session);
   } finally {
     if (!session.sent) {
@@ -372,12 +378,6 @@ async function confirmAnnouncementLocked(interaction, session) {
     },
   };
 
-  try {
-    await interaction.deferUpdate();
-  } catch (error) {
-    session.sending = false;
-    throw error;
-  }
   try {
     if (!session.mainMessageSent) {
       const sentMessage = await channel.send(payload);
@@ -493,6 +493,10 @@ export async function interactionCreate(interaction) {
       await handleSettingCommand(interaction);
       return;
     }
+    if (MUSIC_COMMANDS.has(interaction.commandName)) {
+      await handleMusicCommand(interaction);
+      return;
+    }
   }
 
   if (interaction.isModalSubmit()) {
@@ -521,10 +525,12 @@ export async function interactionCreate(interaction) {
       return;
     }
 
-    await Promise.all([
-      interaction.guild.roles.fetch(),
-      interaction.guild.channels.fetch(),
-    ]);
+    if (interaction.message) {
+      await interaction.deferUpdate();
+    } else {
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+    }
+
     const selectedChannel = interaction.guild.channels.cache.get(session.channelId);
     const selectedRoleIds = [...new Set(session.roleIds)];
     const previousSpecialMention = session.specialMention;
@@ -612,7 +618,6 @@ export async function interactionCreate(interaction) {
       return;
     }
 
-    await interaction.guild.roles.fetch();
     const [, pageText, chunkText] = interaction.customId.split(':');
     const page = Number(pageText);
     const chunkIndex = Number(chunkText);
@@ -661,7 +666,6 @@ export async function interactionCreate(interaction) {
       return;
     }
 
-    await interaction.guild.channels.fetch();
     const [, pageText, chunkText] = interaction.customId.split(':');
     const page = Number(pageText);
     const chunkIndex = Number(chunkText);
@@ -714,10 +718,6 @@ export async function interactionCreate(interaction) {
       return;
     }
 
-    await Promise.all([
-      interaction.guild.roles.fetch(),
-      interaction.guild.channels.fetch(),
-    ]);
     const settings = loadGuildSettings(interaction.guild.id);
     const botMember = interaction.guild.members.me ?? await interaction.guild.members.fetchMe();
     if (
