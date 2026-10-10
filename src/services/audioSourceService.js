@@ -1,4 +1,4 @@
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { config } from '../config/env.js';
 
 const YOUTUBE_HOSTS = new Set([
@@ -22,6 +22,56 @@ const PLAYLIST_RESOLUTION_CONCURRENCY = 3;
 const STDERR_LIMIT = 4_096;
 const activeProcesses = new Set();
 let spotifyToken = null;
+let runtimeCheckPromise = null;
+
+export async function verifyAudioExecutables() {
+  if (runtimeCheckPromise) return runtimeCheckPromise;
+  runtimeCheckPromise = (async () => {
+    const result = spawnSync(config.YT_DLP_PATH, ['--version'], {
+      encoding: 'utf8',
+      timeout: 10_000,
+      windowsHide: true,
+      shell: false,
+    });
+    if (result.error || result.status !== 0) {
+      const reason = result.error?.code === 'ENOENT'
+        ? 'executable không tìm thấy'
+        : (result.error?.message || result.stderr?.trim() || `exit ${result.status}`);
+      throw new Error(`Không chạy được yt-dlp tại "${config.YT_DLP_PATH}": ${reason}`);
+    }
+
+    const version = result.stdout.trim().split(/\r?\n/, 1)[0];
+    const help = spawnSync(config.YT_DLP_PATH, ['--help'], {
+      encoding: 'utf8',
+      timeout: 10_000,
+      windowsHide: true,
+      shell: false,
+    });
+    if (help.error || help.status !== 0 || !`${help.stdout}\n${help.stderr}`.includes('--js-runtimes')) {
+      throw new Error(`yt-dlp ${version || '(không rõ phiên bản)'} tại "${config.YT_DLP_PATH}" không hỗ trợ --js-runtimes. Cập nhật executable rồi khởi động lại.`);
+    }
+
+    console.info(`[AUDIO] yt-dlp executable=${config.YT_DLP_PATH} version=${version}`);
+    logExecutableVersion('Deno', config.DENO_PATH, ['--version']);
+    logExecutableVersion('FFmpeg', config.FFMPEG_PATH || 'ffmpeg', ['-version']);
+  })();
+  return runtimeCheckPromise;
+}
+
+function logExecutableVersion(name, executable, args) {
+  const result = spawnSync(executable, args, {
+    encoding: 'utf8',
+    timeout: 10_000,
+    windowsHide: true,
+    shell: false,
+  });
+  if (result.error || result.status !== 0) {
+    console.warn(`[AUDIO] ${name} executable=${executable} unavailable=${result.error?.code || result.status || result.error?.message || 'unknown error'}`);
+    return;
+  }
+  const version = `${result.stdout}\n${result.stderr}`.trim().split(/\r?\n/, 1)[0];
+  console.info(`[AUDIO] ${name} executable=${executable} version=${version}`);
+}
 
 function javascriptRuntimeArgs() {
   return ['--js-runtimes', `deno:${config.DENO_PATH}`];

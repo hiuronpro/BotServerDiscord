@@ -6,7 +6,7 @@ import { interactionCreate } from './handlers/interactionCreate.js';
 import { ready } from './handlers/ready.js';
 import { shutdownPlayer } from './services/playerService.js';
 import { ensureDataFiles } from './services/settingsService.js';
-import { terminateAudioSourceProcesses } from './services/audioSourceService.js';
+import { terminateAudioSourceProcesses, verifyAudioExecutables } from './services/audioSourceService.js';
 
 if (config.FFMPEG_PATH) {
   process.env.PATH = `${dirname(config.FFMPEG_PATH)}${delimiter}${process.env.PATH || ''}`;
@@ -93,6 +93,7 @@ process.once('SIGTERM', () => {
 
 try {
   ensureDataFiles();
+  await verifyAudioExecutables();
   await deployCommands();
   await client.login(config.BOT_TOKEN);
 } catch (error) {

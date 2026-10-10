@@ -28,11 +28,13 @@ ffmpeg -version
 
 ### Railway
 
-Với Railway dùng Nixpacks, `nixpacks.toml` trong repository cài FFmpeg, yt-dlp và Deno; bước install tải binary yt-dlp mới nhất từ trang phát hành chính thức để có tùy chọn `--js-runtimes`. Bot truyền Deno cho yt-dlp để giải mã JavaScript của YouTube. `package.json` yêu cầu Node.js 22.12 trở lên. Để phát playlist Spotify, thêm `SPOTIFY_CLIENT_ID` và `SPOTIFY_CLIENT_SECRET` vào Variables của Railway; không commit hai giá trị này. Sau khi cập nhật code, chạy **Redeploy** để áp dụng runtime và dependency mới. Nếu project dùng Dockerfile hoặc builder khác, phải cài ba executable tương đương trong image và bảo đảm chúng có trong `PATH`.
+Với Railway dùng Nixpacks, build bật thêm Python provider, cài Python 3.12, Deno và FFmpeg; `requirements.txt` cài `yt-dlp[default]` vào virtualenv Nixpacks `/opt/venv`. `YT_DLP_PATH` được đặt rõ thành `/opt/venv/bin/yt-dlp`, tránh gọi bản yt-dlp từ Nix. Khi khởi động, bot in đường dẫn và phiên bản yt-dlp, Deno, FFmpeg; bot dừng trước khi đăng nhập Discord nếu executable yt-dlp không chạy hoặc không hỗ trợ `--js-runtimes`. `package.json` yêu cầu Node.js 22.12 trở lên. Để phát playlist Spotify, thêm `SPOTIFY_CLIENT_ID` và `SPOTIFY_CLIENT_SECRET` vào Variables của Railway; không commit hai giá trị này.
+
+Để áp dụng trên Railway, commit và push `nixpacks.toml`, `requirements.txt` cùng code mới lên repository đang kết nối, xác nhận Railway dùng Nixpacks (không override bằng Dockerfile/custom start command), rồi **Redeploy** từ commit đó. Trong build log, xác nhận cài dependencies thành công và lệnh `/opt/venv/bin/yt-dlp --help` có `--js-runtimes`. Trong runtime log, xác nhận dòng `[AUDIO] yt-dlp executable=/opt/venv/bin/yt-dlp version=...`. Có thể giữ `YT_DLP_PATH` ở Variables mặc định do Nixpacks đặt; nếu đã tự đặt biến này sang giá trị khác, xóa override hoặc đặt lại `/opt/venv/bin/yt-dlp`. Nếu dùng Dockerfile/builder khác, cần cài `yt-dlp[default]`, Deno và FFmpeg trong image và đặt `YT_DLP_PATH` tới đúng executable.
 
 Nếu YouTube vẫn báo `Sign in to confirm you're not a bot` sau khi Redeploy, lỗi thường do YouTube chặn hoặc giới hạn IP outbound của máy chủ. Đổi builder sang Nixpacks, cài lại Deno hoặc khởi động lại thường không đổi IP outbound của Railway. Hãy kiểm tra log và phiên bản yt-dlp; nếu yt-dlp đã mới nhất mà lỗi vẫn còn, chờ rồi thử lại hoặc liên hệ Railway về IP outbound. Có thể cần chuyển dịch vụ sang máy chủ/mạng khác có quyền truy cập phù hợp với điều khoản dịch vụ của YouTube.
 
-Nếu log yt-dlp có `no such option: --js-runtimes`, bản yt-dlp đang chạy quá cũ để dùng cấu hình Deno của bot. Trên Railway dùng Nixpacks, redeploy commit có cấu hình tải binary yt-dlp trong bước install; kiểm tra build log để xác nhận lệnh tải chạy thành công và bot dùng đúng builder. Trên Windows, cập nhật executable yt-dlp trong `PATH` hoặc tại `YT_DLP_PATH`, rồi khởi động lại bot.
+Lỗi `no such option: --js-runtimes` là dấu hiệu bot đang gọi nhầm hoặc cũ executable yt-dlp; đọc dòng `[AUDIO]` để so đường dẫn/phiên bản với `/opt/venv/bin/yt-dlp`. Lỗi `No supported JavaScript runtime` hoặc log Deno `unavailable` là vấn đề Deno/PATH. Lỗi `Sign in to confirm you're not a bot`, HTTP 403/429, hoặc thông báo video không khả dụng xảy ra sau khi yt-dlp đã chạy được và là lỗi truy cập/giới hạn của YouTube, không phải lỗi phiên bản hay cú pháp tham số.
 
 ## Cài đặt và chạy trên Windows
 
@@ -96,7 +98,7 @@ Player hỗ trợ **âm thanh** từ YouTube và SoundCloud. Spotify không cung
 
 - Không commit `.env` hoặc token.
 - Đường dẫn `/play` được giới hạn ở hostname và dạng link YouTube, SoundCloud, Spotify được hỗ trợ. Spotify playlist cần client credentials; không dùng cookies trình duyệt hay cơ chế vượt hạn chế tuổi/khu vực.
-- yt-dlp/FFmpeg là executable bên ngoài, không được bot tự tải/cài; cần cập nhật chúng riêng khi YouTube thay đổi.
+- yt-dlp/FFmpeg là executable bên ngoài, được cài riêng theo môi trường deploy; cần cập nhật chúng khi YouTube thay đổi.
 - Queue và voice session lưu trong bộ nhớ, không được chia sẻ giữa nhiều tiến trình. Chỉ chạy một instance bot; restart sẽ xóa queue.
 - Cần thử kết nối voice trong server Discord sau khi cấu hình quyền và executable; bot phát âm thanh, không phát hình ảnh video.
 
