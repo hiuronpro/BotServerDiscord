@@ -237,7 +237,7 @@ function trackProcess(child) {
 
 function runYtDlpJson(args, source) {
   return new Promise((resolve, reject) => {
-    const child = spawn(config.YT_DLP_PATH, args, {
+    const child = spawn(config.YT_DLP_PATH, ['--force-ipv4', ...args], {
       windowsHide: true,
       shell: false,
       stdio: ['ignore', 'pipe', 'pipe'],
@@ -661,6 +661,7 @@ export function spawnAudioStream(url) {
     throw new Error('Không thể phát link playlist trực tiếp; cần thêm từng track vào queue.');
   }
   const child = spawn(config.YT_DLP_PATH, [
+    '--force-ipv4',
     '--no-warnings',
     '--no-playlist',
     '--no-progress',
