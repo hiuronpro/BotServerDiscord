@@ -1,5 +1,8 @@
 [phases.setup]
-nixPkgs = ['...', 'deno', 'ffmpeg', 'python3']
+nixPkgs = ['...', 'deno', 'ffmpeg', 'yt-dlp']
 
 [phases.install]
-cmds = ['python3 -m pip install --break-system-packages --no-cache-dir --upgrade yt-dlp']
+cmds = ['...', 'curl -fsSL https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp -o /usr/local/bin/yt-dlp && chmod a+rx /usr/local/bin/yt-dlp']
+
+[start]
+cmd = 'node src/index.js'
