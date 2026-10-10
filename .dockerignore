@@ -1,0 +1,15 @@
+.git
+.github
+.vscode
+node_modules
+coverage
+dist
+logs/*.log
+data/guild-settings.json
+.env
+.env.*
+!.env.example
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
