@@ -1,7 +1,7 @@
 providers = ['...', 'python']
 
 [phases.setup]
-nixPkgs = ['...', 'deno', 'ffmpeg', 'python312']
+nixPkgs = ['...', 'deno', 'ffmpeg']
 
 [phases.install]
 cmds = ['...', 'test -x /opt/venv/bin/yt-dlp', '/opt/venv/bin/yt-dlp --version', '/opt/venv/bin/yt-dlp --help | grep -q -- --js-runtimes', 'deno --version', 'ffmpeg -version']
